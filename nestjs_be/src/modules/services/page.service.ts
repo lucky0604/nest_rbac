@@ -67,5 +67,34 @@ export class PageService extends RepositoryService<Page> {
     }
   }
 
-  
+  async findAll(index: number, size: number, query: PageQuery): Promise<ResultList<Page>> {
+    return new Promise<ResultList<Page>>(async (x) => {
+      let querys = this.entityRepository
+        .createQueryBuilder('page')
+        .leftJoin('page.module', 'module')
+      if (query.name) querys.andWhere('page.name like "%:name%"', {name: query.name})
+      if (query.moduleId) querys.andWhere('module.id=:id', {id: query.moduleId})
+      let result: ResultList<Page> = {
+        list: await querys.skip(size * (index - 1)).take(size).getMany(),
+        count: await querys.getCount(),
+        query: {
+          index: index,
+          size: size
+        }
+      }
+      x(result)
+    })
+  }
+
+  async findByCode(moduleCode: string, pageCode: string): Promise<Page> {
+    return this.entityRepository
+      .createQueryBuilder('page')
+      .leftJoinAndSelect('page.controls', 'control')
+      .leftJoin('page.module', 'module')
+      .where('module.code=:moduleCode and page.code=:pageCode', {
+        pageCode: pageCode,
+        moduleCode: moduleCode
+      })
+      .getOne()
+  }
 }
